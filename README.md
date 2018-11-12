@@ -1,2 +1,2 @@
-# SLiM
-Forward simulation with SLiM: simulating evolution with selection and linkage
+# Haploit selection
+This is the project Haploit selection.
