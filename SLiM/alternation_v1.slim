@@ -18,8 +18,8 @@ initialize()
 	defineConstant("MU", 1e-7);	// mutation rate
 	defineConstant("R", 1e-7);		// recombination rate
 	defineConstant("L1", 1e6-1);	// chromosome last position (length - 1)
-	defineConstant("MeioC", 2500);	// meiosis count per diploid individual
-	defineConstant("SeedMaleNum", 2);	// number(s) of male to produce sperm during the alternation phase
+	defineConstant("MeioC", 250);	// meiosis count per diploid individual
+	defineConstant("SeedMaleNum", 1);	// number(s) of male to produce sperm during the alternation phase
 	
 	initializeSLiMModelType("nonWF");
 	initializeSex("A");
@@ -32,7 +32,7 @@ initialize()
 }
 
 // Burn-in phase
-reproduction(p1)
+1:20000 reproduction(p1)
 {
 	Male = subpop.sampleIndividuals(1, sex="M");
 	Female = subpop.sampleIndividuals(1, sex="F");
@@ -45,14 +45,22 @@ reproduction(p1)
 	sim.addSubpop("p2", 0);		// start p2 with 0 haploid gametes
 }
 
-early()
+1:20000 early()
 {
 	// we have density-dependent population regulation during the burn-in phase
 	p1.fitnessScaling = K / p1.individualCount;
 }
 
+20000 late()
+{
+	// tag the randomly selected individual(s) so their producing within-ejaculate sperms will be output
+	p1.individuals.tag = 0;
+	outputInd = p1.sampleIndividuals(SeedMaleNum, sex="M", tag=0);
+	outputInd.tag = 1;
+}
+
 // p1, diploid individuals, reproduces by generating haploid gametes into p2
-5001 reproduction(p1)
+20001 reproduction(p1)
 {
 	// each diploid undergo meiosis #times (according to the pre-difined "MeioC" parameter)
 	// this could depend on genetics, or be drawn from a Poisson, or whatever
@@ -102,7 +110,7 @@ early()
 }
 
 // p2, haploid gametes, reproduces by generating diploid zygotes into p1
-reproduction(p2, "F")
+20001 reproduction(p2, "F")
 {
 	// each egg chooses a random sperm as a "mate"; we mark sperm as used in a
 	// fertilization by tagging them, so each one gets just one fertilization
@@ -117,12 +125,8 @@ reproduction(p2, "F")
 	child = p1.addRecombinant(individual.genome1, NULL, NULL, mate.genome1, NULL, NULL);
 }
 
-5001 early()
-{
-	// tag the randomly selected individual(s) so their producing within-ejaculate sperms will be output
-	outputInd = p1.sampleIndividuals(SeedMaleNum, sex="M", tag=0);
-	outputInd.tag = 1;
-	
+20001 early()
+{	
 	// after reproduction, whichever population just reproduced dies off; we
 	// are modeling strict alternation of generations with no overlap, although
 	// it would not be hard to change that if we wanted to	
@@ -150,7 +154,7 @@ reproduction(p2, "F")
 	}
 }
 
-5001 late()
+20001 late()
 {
 	// output and finish
 	sim.simulationFinished();
