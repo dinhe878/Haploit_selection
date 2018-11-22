@@ -1,2 +1,2 @@
-# Haploit selection
-This is the project Haploit selection.
+# Haploid selection
+This is the project Haploid selection.
