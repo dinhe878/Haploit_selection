@@ -1,17 +1,17 @@
-// Alternation of generations recipe
-//
-// Ben Haller, 9 November 2018
+/*
+Diploid-haploid alternation model
+29 November 2018
+Authors: Ding He, Ben Haller
 
-// The idea, thanks to Ding He, is to model diploid individuals and haploid gametes
-// alternately, using addRecombinant() to generate them with the additional control
-// it provides.  We will have to generate our own recombination breakpoints; this
-// is something that could perhaps be facilitated by a new method on Chromosome.
-// We will keep adults in one subpop and gametes in another, to simplify the book-
-// keeping.
+Description:
+This script models diploid individuals and haploid gametes alternately, using addRecombinant() to generate them with the additional control it provides. The generation of recombination breakpoints are controlled by script not SLiM (this is something that could perhaps be facilitated by a new method on Chromosome). The adults are kepted in one subpop and gametes in another, so the selection can be introduced in either/both diploid/haploid phases.
 
-// This is a sexual model at the diploid stage, and "M" also represents sperm and
-// "F" eggs; that could be removed, for a model of hermaphroditic gametes
+Although this is a non-Wright-Fisher (nonWF) model, we constrain non-overlapping generations and constant population size as a WF-like behavior for simplicity. This can be modified later if more realistic/complex scenarios are desired.
 
+This is a sexual model at the diploid stage, and "M" also represents sperm and "F" eggs; that could be removed, for a model of hermaphroditic gametes. The sex ratio is now ~ 50/50.
+
+The output for this script is within-ejaculate sperm SNPs (mutational positions) that represent their genetic variations.
+*/
 initialize()
 {
 	defineConstant("K", 500);		// carrying capacity (diploid)
@@ -26,6 +26,7 @@ initialize()
 	initializeMutationRate(MU);
 	initializeMutationType("m1", 0.5, "f", 0.0);
 	m1.convertToSubstitution = T;
+	initializeMutationType("m2", 1.0, "f", 0.5);		// dominant beneficial
 	initializeGenomicElementType("g1", m1, 1.0);
 	initializeGenomicElement(g1, 0, L1);
 	initializeRecombinationRate(R);
