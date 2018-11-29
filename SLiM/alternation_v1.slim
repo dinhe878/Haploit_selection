@@ -15,7 +15,6 @@
 initialize()
 {
 	defineConstant("K", 500);		// carrying capacity (diploid)
-	defineConstant("L", c(0.0, 1.0));	// life table for non-overlapping generations
 	defineConstant("MU", 1e-7);	// mutation rate
 	defineConstant("R", 1e-7);		// recombination rate
 	defineConstant("L1", 1e6-1);	// chromosome last position (length - 1)
@@ -35,9 +34,13 @@ initialize()
 // Burn-in phase
 1:20000 reproduction(p1)
 {
-	Male = subpop.sampleIndividuals(1, sex="M");
-	Female = subpop.sampleIndividuals(1, sex="F");
-	subpop.addCrossed(Female, Male);
+	for (i in seqLen(K))
+	{
+		Father = subpop.sampleIndividuals(1, sex="M");
+		Mother = subpop.sampleIndividuals(1, sex="F");
+		child = subpop.addCrossed(Mother, Father);
+	}
+	self.active = 0;	// done generating all offsprings, don't call us again this generation
 }
 
 1 early()
@@ -48,15 +51,9 @@ initialize()
 
 1:20000 early()
 {
-	// setting individual survival rate based on previously defined life table L
 	inds = p1.individuals;
-	ages = inds.age;
-	mortality = L[ages];
-	survival = 1 - mortality;
-	inds.fitnessScaling = survival;
-	
-	// density-dependence, factoring in individual mortality
-	p1.fitnessScaling = K / (p1.individualCount * mean(survival));
+	adults = inds[inds.age > 0];
+	adults.fitnessScaling = 0.0;
 }
 
 /*
@@ -222,8 +219,10 @@ late ()
 		// we just generated diploids; purge the haploids
 		p2.fitnessScaling = 0.0;
 		
+		/* may not be needed
 		// we have density-dependent population regulation in the diploid stage
 		p1.fitnessScaling = K / p1.individualCount;
+		*/
 		
 		// we want mutation during meiosis, so turn it on
 		sim.chromosome.setMutationRate(MU);
