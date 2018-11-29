@@ -27,6 +27,7 @@ initialize()
 	initializeMutationType("m1", 0.5, "f", 0.0);
 	m1.convertToSubstitution = T;
 	initializeMutationType("m2", 1.0, "f", 0.5);		// dominant beneficial
+	m2.convertToSubstitution = T;
 	initializeGenomicElementType("g1", m1, 1.0);
 	initializeGenomicElement(g1, 0, L1);
 	initializeRecombinationRate(R);
@@ -52,9 +53,14 @@ initialize()
 
 1:20000 early()
 {
+	// non-overlapping generations
 	inds = p1.individuals;
 	adults = inds[inds.age > 0];
 	adults.fitnessScaling = 0.0;
+	
+	// introduce beneficial mutations
+	mutant = sample(p1.individuals.genomes, 10);	// 10 genomes (1% of p1 2*500 genomes)
+	mutant.addNewDrawnMutation(m2, 100000);
 }
 
 /*
