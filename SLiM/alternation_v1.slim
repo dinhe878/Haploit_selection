@@ -27,14 +27,15 @@ initialize()
 	initializeMutationType("m1", 0.5, "f", 0.0);
 	m1.convertToSubstitution = T;
 	initializeMutationType("m2", 1.0, "f", 0.5);		// dominant beneficial
-	m2.convertToSubstitution = T;
+	//m2.convertToSubstitution = T;
 	initializeGenomicElementType("g1", m1, 1.0);
 	initializeGenomicElement(g1, 0, L1);
 	initializeRecombinationRate(R);
+	//setSeed(1600147136423);		// seed for beneficial mutation fixation
 }
 
 // Burn-in phase
-1:2000 reproduction(p1)
+1:20000 reproduction(p1)
 {
 	for (i in seqLen(K))
 	{
@@ -49,18 +50,18 @@ initialize()
 {
 	sim.addSubpop("p1", K);		// start p1 with K diploid adults
 	sim.addSubpop("p2", 0);		// start p2 with 0 haploid gametes
+
+	// introduce beneficial mutations
+	mutant = sample(p1.individuals.genomes, 10);	// 10 genomes (1% of p1 2*500 genomes)
+	mutant.addNewDrawnMutation(m2, 100000);
 }
 
-1:2000 early()
+early()
 {
 	// non-overlapping generations
 	inds = p1.individuals;
 	adults = inds[inds.age > 0];
 	adults.fitnessScaling = 0.0;
-	
-	// introduce beneficial mutations
-	mutant = sample(p1.individuals.genomes, 2);	// 10 genomes (1% of p1 2*500 genomes)
-	mutant.addNewDrawnMutation(m2, 100000);
 }
 
 /*
@@ -71,7 +72,7 @@ late ()
 }
 */
 
-2000 late()
+20000 late()
 {	
 	// tag the randomly selected individual(s) so their producing within-ejaculate sperms will be output
 	outputInd = p1.sampleIndividuals(SeedMaleNum, sex="M");
@@ -79,7 +80,7 @@ late ()
 }
 
 // p1, diploid individuals, reproduces by generating haploid gametes into p2
-2001 reproduction(p1)
+20001 reproduction(p1)
 {
 	// each diploid undergo meiosis #times (according to the pre-difined "MeioC" parameter)
 	// this could depend on genetics, or be drawn from a Poisson, or whatever
@@ -190,7 +191,7 @@ late ()
 }
 
 // p2, haploid gametes, reproduces by generating diploid zygotes into p1
-2001 reproduction(p2, "F")
+20001 reproduction(p2, "F")
 {
 	// each egg chooses a random sperm as a "mate"; we mark sperm as used in a
 	// fertilization by tagging them, so each one gets just one fertilization
@@ -205,7 +206,7 @@ late ()
 	child = p1.addRecombinant(individual.genome1, NULL, NULL, mate.genome1, NULL, NULL);
 }
 
-2001 early()
+20001 early()
 {	
 	// after reproduction, whichever population just reproduced dies off; we
 	// are modeling strict alternation of generations with no overlap, although
@@ -236,7 +237,7 @@ late ()
 	}
 }
 
-2001 late()
+20001 late()
 {
 	// output and finish
 	sim.simulationFinished();
