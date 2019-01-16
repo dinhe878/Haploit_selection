@@ -19,7 +19,7 @@ MU, mutation rate
 R, recombination rate
 L, chromosome length
 mc, meiosis count per diploid individual
-smu, number(s) of male to produce sperm during the alternation phase
+smu, number(s) of male to output sperm genetics (i.e. print to file) during the alternation phase
 st, selection type: p - positive, n - negative, neu - neutral 
 rs, recombination scheme
 la, relevant parameters/equation associated recombination scheme
@@ -31,7 +31,7 @@ initialize()
 {
 	defineConstant("K", k);		// carrying capacity (diploid), value is passed via commandline
 	defineConstant("MeioC", mc);	// meiosis count per diploid individual, value is passed via commandline
-	defineConstant("SeedMaleNum", smu);	// number(s) of male to produce sperm during the alternation phase, value is passed via commandline
+	defineConstant("SeedMaleNum", smu);	// number(s) of male to output sperm genetics (i.e. print to file) during the alternation phase, value is passed via commandline
 	defineConstant("SelectionType", st);	// selection type, value is passed via commandline
 	defineConstant("RecScheme", rs);	// decide how many recombination per meiosis: 0 - no recombination, 1 - specific # of recombination, 2 - draw from poisson with lammda #
 	defineConstant("rsParam", la);	// 0 when rs==0, n (exact number of meiotic recombinations) when rs==1, lammda (specify equation) when rs==2
@@ -45,10 +45,14 @@ initialize()
 	// decide selection type or neutral
 	if (SelectionType == "p")
 	{
+		initializeMutationType("m1", 0.5, "f", 0.0);		// neutral
+		m1.convertToSubstitution = T;
 		initializeMutationType("m2", 1.0, "f", 0.5);		// dominant beneficial
 		//m2.convertToSubstitution = T;
 	} else if (SelectionType == "n")
 	{
+		initializeMutationType("m1", 0.5, "f", 0.0);		// neutral
+		m1.convertToSubstitution = T;
 		initializeMutationType("m2", 1.0, "f", -0.5);	// dominant deleterious
 		//m2.convertToSubstitution = T;
 	} else if (SelectionType == "neu")
@@ -60,7 +64,7 @@ initialize()
 	initializeGenomicElementType("g1", m1, 1.0);
 	initializeGenomicElement(g1, 0, L-1);
 	initializeRecombinationRate(R);
-	//setSeed(seed);		// specify seed if necessary
+	//setSeed(seed);		// specify seed if necessary	
 }
 
 // Burn-in phase
@@ -79,16 +83,11 @@ initialize()
 {
 	sim.addSubpop("p1", K);		// start p1 with K diploid adults
 	sim.addSubpop("p2", 0);		// start p2 with 0 haploid gametes
-
-	// introduce non-neutral mutations
-	if (SelectionType == "p" | SelectionType == "n")
-	{
-		mutant = sample(p1.individuals.genomes, 10);	// 10 genomes (1% of p1 2*500 genomes)
-		mutant.addNewDrawnMutation(m2, 100000);
-	}
+	
+	sim.setValue("Selection_gen_counter", 1);		// Generation counter after the directional selection kicking in
 }
 
-early()
+1:20000 early()
 {
 	// non-overlapping generations
 	inds = p1.individuals;
@@ -104,16 +103,17 @@ late ()
 }
 */
 
-20000 late()
+20000:20005 late()
 {	
 	// tag the randomly selected individual(s) so their producing within-ejaculate sperms will be output
 	outputInd = p1.sampleIndividuals(SeedMaleNum, sex="M");
 	n = 1;
-	for (ind in outputInd) { ind.tag = n; n = n + 1;}
+	for (ind in outputInd) { ind.tag = n; n = n + 1; }
+	catn("p1 count: " + p1.individualCount);
 }
 
 // p1, diploid individuals, reproduces by generating haploid gametes into p2
-20001 reproduction(p1)
+20001:20006 reproduction(p1)
 {
 	// each diploid undergo meiosis #times (according to the pre-difined "MeioC" parameter)
 	// this could depend on genetics, or be drawn from a Poisson, or whatever
@@ -122,6 +122,20 @@ late ()
 	
 	rs_oneLine = NULL;
 	
+	// recording the founding father genomes (FG)
+	if (individual.sex == "M" & individual.tag != 0)
+	{
+		Sperm_batch_title = paste(c("##### This is the ", individual.tag, " within-ejaculate sperm batch #####"));
+		catn(Sperm_batch_title);
+		writeFile(SGmut_file+"."+individual.tag, Sperm_batch_title, append = T);
+		FG_1_line = paste(c("FG_1", genome1.mutations.position));
+		FG_2_line = paste(c("FG_2", genome2.mutations.position));	
+		catn(FG_1_line);
+		catn(FG_2_line);
+		writeFile(SGmut_file+"."+individual.tag, FG_1_line, append = T);
+		writeFile(SGmut_file+"."+individual.tag, FG_2_line, append = T);
+	}
+		
 	for (meiosisCount in 1:MeioC)
 	{
 		// we're modeling alternation of generations in ferns, which just release
@@ -159,7 +173,7 @@ late ()
 			RS_lines = NULL;		// assembling recombinant segment sizes
 
 			if (individual.tag != 0)
-			{
+			{				
 				if (size(breaks_1) > 0)
 				{
 					breaks_1 = sort(breaks_1);
@@ -263,7 +277,7 @@ late ()
 }
 
 // p2, haploid gametes, reproduces by generating diploid zygotes into p1
-20001 reproduction(p2, "F")
+20001:20006 reproduction(p2, "F")
 {
 	// each egg chooses a random sperm as a "mate"; we mark sperm as used in a
 	// fertilization by tagging them, so each one gets just one fertilization
@@ -278,13 +292,29 @@ late ()
 	child = p1.addRecombinant(individual.genome1, NULL, NULL, mate.genome1, NULL, NULL);
 }
 
-20001 early()
+20001:20006 early()
 {	
 	// after reproduction, whichever population just reproduced dies off; we
 	// are modeling strict alternation of generations with no overlap, although
-	// it would not be hard to change that if we wanted to	
+	// it would not be hard to change that if we wanted to
+		
+	// this is the early-stage for the diploid phase
 	if (sim.generation % 2 == 0)
 	{
+		catn("##### Alternation diploid phase gen " + sim.getValue("Selection_gen_counter") + " #####");
+		sim.setValue("Selection_gen_counter", sim.getValue("Selection_gen_counter") + 1);
+
+		catn("p1 count: " + p1.individualCount);
+		
+		// introduce non-neutral mutations
+		if (SelectionType == "p" | SelectionType == "n")
+		{
+			catn("##### Directional selection starts now, gen " + sim.getValue("Selection_gen_counter") + " #####");
+			mutant = sample(p1.individuals.genomes, 10);	// 10 genomes (1% of p1 2*500 genomes)
+			mutant.addNewDrawnMutation(m2, 100000);
+			sim.setValue("Selection_gen_counter", sim.getValue("Selection_gen_counter") + 1);
+		}
+
 		// we just generated haploids; purge the diploids
 		p1.fitnessScaling = 0.0;
 		
@@ -294,22 +324,29 @@ late ()
 		// we do not want mutation be involved in fertilization, so turn it off
 		sim.chromosome.setMutationRate(0.0);
 	}
+	// this is the early-stage for the haploid phase
 	else
 	{
+		catn("##### Alternation haploid phase gen " + sim.getValue("Selection_gen_counter") + " #####");
+		sim.setValue("Selection_gen_counter", sim.getValue("Selection_gen_counter") + 1);
+	
+		catn("p2 count: " + p2.individualCount);
+
 		// we just generated diploids; purge the haploids
 		p2.fitnessScaling = 0.0;
 		
-		/* may not be needed
-		// we have density-dependent population regulation in the diploid stage
+		// we have density-dependent population size regulation in the diploid stage
 		p1.fitnessScaling = K / p1.individualCount;
-		*/
 		
 		// we want mutation during meiosis, so turn it on
 		sim.chromosome.setMutationRate(MU);
+		
+		// reset the newly generated diploids tags, so the new randomly selected individual(s)' within-ejaculate sperms will be output
+		p1.individuals.tag = 0;
 	}
 }
 
-20001 late()
+20006 late()
 {
 	// output and finish
 	sim.simulationFinished();
