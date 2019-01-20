@@ -68,7 +68,7 @@ initialize()
 }
 
 // Burn-in phase
-1:20000 reproduction(p1)
+1:19999 reproduction(p1)
 {
 	for (i in seqLen(K))
 	{
@@ -87,7 +87,7 @@ initialize()
 	sim.setValue("Selection_gen_counter", 1);		// Generation counter after the directional selection kicking in
 }
 
-1:20000 early()
+1:19999 early()
 {
 	// non-overlapping generations
 	inds = p1.individuals;
@@ -103,17 +103,16 @@ late ()
 }
 */
 
-20000:20005 late()
+19999:20005 late()
 {	
 	// tag the randomly selected individual(s) so their producing within-ejaculate sperms will be output
 	outputInd = p1.sampleIndividuals(SeedMaleNum, sex="M");
 	n = 1;
 	for (ind in outputInd) { ind.tag = n; n = n + 1; }
-	catn("p1 count: " + p1.individualCount);
 }
 
 // p1, diploid individuals, reproduces by generating haploid gametes into p2
-20001:20006 reproduction(p1)
+20000:20006 reproduction(p1)
 {
 	// each diploid undergo meiosis #times (according to the pre-difined "MeioC" parameter)
 	// this could depend on genetics, or be drawn from a Poisson, or whatever
@@ -125,7 +124,7 @@ late ()
 	// recording the founding father genomes (FG)
 	if (individual.sex == "M" & individual.tag != 0)
 	{
-		Sperm_batch_title = paste(c("##### This is the ", individual.tag, " within-ejaculate sperm batch #####"));
+		Sperm_batch_title = paste(c("####### Generation " + sim.generation + " #######\n", "##### This is the ", individual.tag, " within-ejaculate sperm batch #####"));
 		catn(Sperm_batch_title);
 		writeFile(SGmut_file+"."+individual.tag, Sperm_batch_title, append = T);
 		FG_1_line = paste(c("FG_1", genome1.mutations.position));
@@ -134,6 +133,7 @@ late ()
 		catn(FG_2_line);
 		writeFile(SGmut_file+"."+individual.tag, FG_1_line, append = T);
 		writeFile(SGmut_file+"."+individual.tag, FG_2_line, append = T);
+		writeFile(RS_file+"."+individual.tag, Sperm_batch_title, append = T);
 	}
 		
 	for (meiosisCount in 1:MeioC)
@@ -183,6 +183,7 @@ late ()
 					if (break_count_1 == 1)
 					{
 						catn(c("RS_1", breaks_1, L-breaks_1));
+						RS_lines = c(RS_lines, breaks_1, L-breaks_1);
 					} else
 					{
 						RS = c();
@@ -221,6 +222,7 @@ late ()
 					if (break_count_2 == 1)
 					{
 						catn(c("RS_2", breaks_2, L-breaks_2));
+						RS_lines = c(RS_lines, breaks_2, L-breaks_2);
 					} else
 					{
 						RS = c();
@@ -257,7 +259,7 @@ late ()
 				} else
 				{
 					rs_file = paste(rs_oneLine);
-					if (!writeFile(RS_file+"."+individual.tag, rs_file)) { stop("Error writing RS_file."); }
+					if (!writeFile(RS_file+"."+individual.tag, rs_file, append = T)) { stop("Error writing RS_file."); }
 				}				
 			}
 		}
@@ -277,7 +279,7 @@ late ()
 }
 
 // p2, haploid gametes, reproduces by generating diploid zygotes into p1
-20001:20006 reproduction(p2, "F")
+20000:20006 reproduction(p2, "F")
 {
 	// each egg chooses a random sperm as a "mate"; we mark sperm as used in a
 	// fertilization by tagging them, so each one gets just one fertilization
@@ -292,7 +294,7 @@ late ()
 	child = p1.addRecombinant(individual.genome1, NULL, NULL, mate.genome1, NULL, NULL);
 }
 
-20001:20006 early()
+20000:20006 early()
 {	
 	// after reproduction, whichever population just reproduced dies off; we
 	// are modeling strict alternation of generations with no overlap, although
@@ -301,19 +303,25 @@ late ()
 	// this is the early-stage for the diploid phase
 	if (sim.generation % 2 == 0)
 	{
-		catn("##### Alternation diploid phase gen " + sim.getValue("Selection_gen_counter") + " #####");
+		catn("################################################################################");
+		catn("Alternation diploid phase gen " + sim.getValue("Selection_gen_counter"));
 		sim.setValue("Selection_gen_counter", sim.getValue("Selection_gen_counter") + 1);
 
-		catn("p1 count: " + p1.individualCount);
+		catn("diploid individual count: " + p1.individualCount);
 		
 		// introduce non-neutral mutations
 		if (SelectionType == "p" | SelectionType == "n")
 		{
-			catn("##### Directional selection starts now, gen " + sim.getValue("Selection_gen_counter") + " #####");
+			catn("Directional selection starts now, gen " + sim.getValue("Selection_gen_counter"));
 			mutant = sample(p1.individuals.genomes, 10);	// 10 genomes (1% of p1 2*500 genomes)
 			mutant.addNewDrawnMutation(m2, 100000);
 			sim.setValue("Selection_gen_counter", sim.getValue("Selection_gen_counter") + 1);
+		} else
+		{
+			catn("Neutral");
 		}
+
+		catn("################################################################################");
 
 		// we just generated haploids; purge the diploids
 		p1.fitnessScaling = 0.0;
@@ -327,10 +335,12 @@ late ()
 	// this is the early-stage for the haploid phase
 	else
 	{
-		catn("##### Alternation haploid phase gen " + sim.getValue("Selection_gen_counter") + " #####");
+		catn("################################################################################");
+		catn("Alternation haploid phase gen " + sim.getValue("Selection_gen_counter"));
 		sim.setValue("Selection_gen_counter", sim.getValue("Selection_gen_counter") + 1);
 	
-		catn("p2 count: " + p2.individualCount);
+		catn("haploid individual (sperm) count: " + p2.individualCount);
+		catn("################################################################################");
 
 		// we just generated diploids; purge the haploids
 		p2.fitnessScaling = 0.0;
