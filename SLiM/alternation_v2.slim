@@ -1,4 +1,42 @@
-// Keywords: alternation of generations, sporophyte, gametophyte, sperm, eggs, diploid, haploid, mating system, fertilization, meiosisinitialize(){	if (exists("slimgui"))
+/*
+Model name: alternation of generations
+
+15 Mar 2019
+Authors: Ding He, Ben Haller
+
+Model description:
+This model simulates diploid individuals and haploid gametes alternately, representing alternation of generations of sexual reproduction in animals (but may be extending to other organisms). The recombination is controlled within the script, not relied on SLiM default engine. The diploid adults are kepted in one subpop (p1) and haploid gametes in another (p2). This setup enables a easy way to introduce non-neutral mutations (selection) in a variety of ways at diploid/haploid level.
+
+Although this is a non-Wright-Fisher (nonWF) model, we constrain strick non-overlapping generations and keep the diploid population p1 size stable (fluctuating around the population carrying capacity) for simplicity. This could be modified later if more realistic/complex scenarios are desired.
+
+"M" represents male/sperm and "F" female/egg, which could be removed for a model of hermaphroditic gametes. The sex ratio at diploid level is now ~ 1:1.
+
+The main output of the model is records of males and sperms. Each line represents one male or sperm. The spec of the line is:
+
+(M)ale/(S)perm|Tag|Sim_gen|Diploid genone1/2 (Male) or Haploid genome tetras 1/2/3/4 (sperm)|Breakpoint positions|(B)enficial/(D)eleterious mutation positions|All mutation positions
+
+Male (tag 1) genome1 without beneficial/deleterious mutation: 
+M|1|20000|1|0|B|13094 16436 18118 18599 18681 19593 19620...
+Sperm (tag 87) tetras genome2 with a beneficial mutation at position 100000:	
+S|87|20002|2|669049|B 100000|8619 13094 16436 20274 24800 25864...
+
+Although the records are stored in order of Male-within_ejaculate_sperms batches, all individuals of the founding population  (p1) are uniquely tagged and all sperms inherit tags from their father, and all offsprings (diploid) inherit tags of their fertilized-sperms. In other words, the tags track the paternal pedigree. Since we are storing every male and every sperm for a desired number of generations, the size of output data depends on founding population size, genome length, number of times of meosis (which dertermines how many sperms) and the number of generations stored.
+
+Currently, the recombination during the burn-in phase and alternation phase is both SLiM-controlled via only the recombination rate (R). Apparently we could add more complex recombination maps to govern the recombination further.  
+
+Most of the simulating parameters can be passed via the commandline:
+
+k, carrying capacity (diploid) / founding population size
+MU, mutation rate
+R, recombination rate
+L1, chromosome end (length - 1)
+out_file, output file path and name
+mc, meiosis count per diploid individual
+ST, non-neutral selection type: (b)enefiical, (d)eleterious 
+SC, non-neutral selection scenario: (h)aploid-only, (d)iploid-only, (b)oth
+
+*/
+initialize(){	if (exists("slimgui"))
 	{
 		defineConstant("K", 500);     // carrying capacity (diploid)
 		defineConstant("MU", 1e-7);   // mutation rate
@@ -6,8 +44,8 @@
 		defineConstant("L1", 1e6-1);  // chromosome end (length - 1)
 		defineConstant("out_file", "~/Desktop/tmp/slimout");	// output file name
 		defineConstant("mc", 5);		// meiosis count per diploid individual
-		defineConstant("ST", "b");	// non neutral selection type: (b)enefiical, (d)eleterious
-		defineConstant("SC", "d");	// non neutral selection scenario: (h)aploid-only, (d)iploid-only, (b)oth
+		defineConstant("ST", "b");	// non-neutral selection type: (b)enefiical, (d)eleterious
+		defineConstant("SC", "d");	// non-neutral selection scenario: (h)aploid-only, (d)iploid-only, (b)oth
 	} else {
 		if (!exists("K")) defineConstant("K", 500);
 		if (!exists("mc")) defineConstant("mc", 250);
@@ -27,7 +65,7 @@
 		m1.convertToSubstitution = T;
 	}
 	
-	initializeGenomicElementType("g1", m1, 1.0);	initializeGenomicElement(g1, 0, L1);	initializeRecombinationRate(R);}1:19999 reproduction(p1){	// generate K offspring with randomly chosen parents	for (i in seqLen(K))	{		Father = subpop.sampleIndividuals(1, sex="M");		Mother = subpop.sampleIndividuals(1, sex="F");		child = subpop.addCrossed(Mother, Father);	}		// done generating all offsprings, don't call us again this generation	self.active = 0;}1 early(){	defineConstant("simID", getSeed());	sim.addSubpop("p1", K);	sim.addSubpop("p2", 0);}1:19999 early(){	// non-overlapping generations	inds = p1.individuals;	adults = inds[inds.age > 0];	adults.fitnessScaling = 0.0;}19999 late(){				// all males get a non-zero unique tag value
+	initializeGenomicElementType("g1", m1, 1.0);	initializeGenomicElement(g1, 0, L1);	initializeRecombinationRate(R);}// generations 1-19999 are burn-in phase1:19999 reproduction(p1){	// generate K offspring with randomly chosen parents	for (i in seqLen(K))	{		Father = subpop.sampleIndividuals(1, sex="M");		Mother = subpop.sampleIndividuals(1, sex="F");		child = subpop.addCrossed(Mother, Father);	}		// done generating all offsprings, don't call us again this generation	self.active = 0;}1 early(){	defineConstant("simID", getSeed());	sim.addSubpop("p1", K);	sim.addSubpop("p2", 0);}1:19999 early(){	// non-overlapping generations	inds = p1.individuals;	adults = inds[inds.age > 0];	adults.fitnessScaling = 0.0;}19999 late(){				// all males get a non-zero unique tag value
 	males = p1.subsetIndividuals(sex="M");	males.tag = 1:males.length();
 			catn("*****Burn-in complete*****\n");}20000:20010 reproduction(p1){	// The ind record line: Male or Sperm|Tag|Sim_gen|Male genone1 or genone2; Sperm 1-4|Breakpoints|(B)enficial
 	// mut/(D)eleterious mut positions|All mut positions
