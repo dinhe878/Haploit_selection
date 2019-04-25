@@ -1,0 +1,18 @@
+### command line parameters ###
+
+k, carrying capacity (diploid) / founding population size
+MU, mutation rate
+R, recombination rate
+L, chromosome length
+mc, meiosis count per diploid individual
+smu, number(s) of male to output sperm genetics (i.e. print to file) during the alternation phase
+st, selection type: p - positive, n - negative, neu - neutral 
+rs, recombination scheme. 0 - no recombination, 1 - specific # of recombination, 2 - draw from poisson with lammda.
+la, relevant parameters/equation associated recombination scheme
+rsF, output file name of recombinant segment sizes
+sgmutF, output file name of sperm SNPs
+
+### slim executive command lines ###
+slim -d k=500 -d MU=1e-7 -d R=1e-6 -d L=1000000 -d mc=250 -d smu=1 -d "st='neu'" -d rs=2 -d "la=MU*L*10" -d "rsF='/Users/dinghe/Dropbox/Projects/Haploid_evolution/R/alternation_v1_01012019_L1mFP500SP1kRSpoiLA1_STneu.rs'" -d "sgmutF='/Users/dinghe/Dropbox/Projects/Haploid_evolution/R/alternation_v1_01012019_L1mFP500SP1kRSpoiLA1_STneu.SGmut'" alternation_v1.slim > ~/Dropbox/Projects/Haploid_evolution/SLiM/alternation_model/output/alternation_v1_01012019_L1mFP500SP1kRSpoiLA1_STneu.slimout
+
+slim -d k=500 -d MU=1e-7 -d R=1e-6 -d L=1000000 -d mc=250 -d smu=1 -d "st='p'" -d rs=2 -d "la=MU*L*10" -d "rsF='/Users/dinghe/Dropbox/Projects/Haploid_evolution/R/alternation_v1_01012019_L1mFP500SP1kRSpoiLA1_STp.rs'" -d "sgmutF='/Users/dinghe/Dropbox/Projects/Haploid_evolution/R/alternation_v1_01012019_L1mFP500SP1kRSpoiLA1_STp.SGmut'" alternation_v1.slim > ~/Dropbox/Projects/Haploid_evolution/SLiM/alternation_model/output/alternation_v1_01012019_L1mFP500SP1kRSpoiLA1_STp.slimout
