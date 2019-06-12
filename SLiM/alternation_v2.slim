@@ -77,9 +77,10 @@ function (f$)subpopHeterozygosity(o<Subpopulation>$ subpop, i$ sampleSize)
 		defineConstant("R", 1e-6);    // recombination rate
 		defineConstant("L1", 1e6-1);  // chromosome end (length - 1)
 		defineConstant("out_file", "~/Desktop/tmp/slimout");	// output file name
-		defineConstant("mc", 5);		// meiosis count per diploid individual
+		defineConstant("mc", 250);		// meiosis count per diploid individual
 		defineConstant("ST", "n");	// selection type: (b)enefiical, (d)eleterious, (n)eutral
 		defineConstant("SC", "n");	// non-neutral selection scenario: (h)aploid-only, (d)iploid-only, (b)oth, (n)eutral
+		defineConstant("BP", "s");	// (0) no crossing-over; (Integer>0) user-defined numbers of crossing-over; (s)lim-defined crossing-over
 	} else {
 		if (!exists("K")) defineConstant("K", 500);
 		if (!exists("mc")) defineConstant("mc", 250);
@@ -88,6 +89,7 @@ function (f$)subpopHeterozygosity(o<Subpopulation>$ subpop, i$ sampleSize)
 		if (!exists("L1")) defineConstant("L1", 1e6-1);
 		if (!exists("ST")) defineConstant("ST", "n");
 		if (!exists("SC")) defineConstant("SC", "n");
+		if (!exists("BP")) defineConstant("BP", "s");
 	}		initializeSLiMModelType("nonWF");	initializeSex("A");	initializeMutationRate(MU);	initializeMutationType("m1", 0.5, "f", 0.0);		// neutral	m1.convertToSubstitution = T;
 	// determine non-neutral selection scenarios
 	if (ST == "b") {		catn("***Selection after burn-in: beneficial***");
@@ -135,7 +137,9 @@ function (f$)subpopHeterozygosity(o<Subpopulation>$ subpop, i$ sampleSize)
 		writeFile(out_file+"_"+simID, male_g1_record, append = T);
 		male_g2_record = paste(c("M", individual.tag, sim.generation, "2", "0", g_2_nonNeu_mut_pos, g_2_mut_pos), sep = "|");
 		writeFile(out_file+"_"+simID, male_g2_record, append = T);
-	}		for (meiosisCount in 1:mc)	{		if (individual.sex == "M")		{			breaks = sim.chromosome.drawBreakpoints(individual);
+	}		for (meiosisCount in 1:mc)	{		if (individual.sex == "M")		{			if (BP == "s") { breaks = sim.chromosome.drawBreakpoints(individual); }
+			else if (BP == "n") { breaks = sim.chromosome.drawBreakpoints(individual, n = 0); }
+			else { breaks = sim.chromosome.drawBreakpoints(individual, n = BP); }
 			s_1 = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
 			pn.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
 			s_2 = p2.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
@@ -158,7 +162,10 @@ function (f$)subpopHeterozygosity(o<Subpopulation>$ subpop, i$ sampleSize)
 			writeFile(out_file+"_"+simID, s1_record, append = T);
 			s2_record = paste(c("S", individual.tag, sim.generation, "2", breaks, s_2_nonNeu_mut_pos, s_2_mut_pos), sep = "|");
 			writeFile(out_file+"_"+simID, s2_record, append = T);
-						breaks = sim.chromosome.drawBreakpoints(individual);			s_3 = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
+						if (BP == "s") { breaks = sim.chromosome.drawBreakpoints(individual); }
+			else if (BP == "n") { breaks = sim.chromosome.drawBreakpoints(individual, n = 0); }
+			else { breaks = sim.chromosome.drawBreakpoints(individual, n = BP); }
+			s_3 = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
 			pn.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");			s_4 = p2.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
 			pn.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
 			s_3_mut_pos = paste(s_3.genome1.mutations.position);
