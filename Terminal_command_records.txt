@@ -1,0 +1,11 @@
+## 13062018
+# extract recombinant fragments
+sed -n -e 's/RS_[0-9]* //p' SLiM_OUTPUT > OUTPUT
+# get ride of newlines
+tr '\n' ' ' < OUTPUT > OUTPUT_1
+
+# extract sperm haplotypes
+sed -n -e '/SG.*/p' SLiM_OUTPUT > OUTPUT
+
+# get ride of newlines
+tr '\n' ' ' < NeutralModel_BP1L100kFP5kSP1k > NeutralModel_BP1L100kFP5kSP1k_1
