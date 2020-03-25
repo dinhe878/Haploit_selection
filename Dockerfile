@@ -6,6 +6,7 @@ RUN apt update -y && \
     apt upgrade -y && \
     apt install git -y && \
     apt install cmake -y && \
+    apt install build-essential -y && \
     git clone https://github.com/MesserLab/SLiM.git && \
     mkdir SLiM_build && \
     cd SLiM_build && \
