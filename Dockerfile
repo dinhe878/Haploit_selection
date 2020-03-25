@@ -1,7 +1,7 @@
 FROM ubuntu:latest
 MAINTAINER Ding He <dinghe6723@gmail.com>
 
-# Download and install the latest SLiM from github
+# Download and install git and the latest SLiM from github
 RUN apt update -y && \
     apt upgrade -y && \
     apt install git -y && \
