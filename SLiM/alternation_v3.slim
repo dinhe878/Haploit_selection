@@ -80,16 +80,16 @@ initialize()
 	initializeSLiMModelType("nonWF");
 
 	// turn on nucleotide simulation mode, and potential speed-up with mutationRuns=16
-	//initializeSLiMOptions(mutationRuns=16, nucleotideBased=T);
-	initializeSLiMOptions(nucleotideBased=T);
+	initializeSLiMOptions(mutationRuns=32, nucleotideBased=T);
+	//initializeSLiMOptions(nucleotideBased=T);
 	
 	if (exists("slimgui"))
 	{
 		defineConstant("K", 100);     // carrying capacity (diploid)
 		defineConstant("MU", 1e-4);   // mutation rate
 		defineConstant("R", 1e-8);    // recombination rate
-		defineConstant("L", initializeAncestralNucleotides("~/Desktop/tmp/D_rerio_ch25_excl_N_1MB.split.10Kmer.fasta"));  // ancestral seq from a fasta file
-		defineConstant("out_file", "~/Desktop/tmp/slimout");	// output file name
+		defineConstant("L", initializeAncestralNucleotides("~/Desktop/Hap-SLiM_project/D_rerio_ch25_excl_N_1MB.split.10Kmer.fasta"));  // ancestral seq from a fasta file
+		defineConstant("out_file", "~/Desktop/Hap-SLiM_project/slimout");	// output file name
 		defineConstant("mc", 10);		// meiosis count per diploid individual
 		defineConstant("ST", "b");	// selection type: (b)enefiical, (d)eleterious, (n)eutral
 		defineConstant("SC", "h");	// non-neutral selection scenario: (h)aploid-only, (d)iploid-only, (b)oth, (n)eutral
@@ -98,15 +98,16 @@ initialize()
 		defineConstant("NonCodingLen", 5000);    // Noncoding region length 		
 		defineConstant("IntronLen", 500);    // Intron region length 		
 		defineConstant("ExonLen", 300);    // Exon region length 		
-		defineConstant("SpermPopSeqFastaCount", 1);    // The number within-ejaculate sperm pop per generation will be output as genome fasta file
+		defineConstant("MaleSpermSampleCount", 1);    // Number of males' within-ejaculate sperm pop will be sampled and output as  fasta format
+		defineConstant("PerMaleSpermSampleCount", 100);    // Number of sperms per maleswill be sampled and output as  fasta format
 		defineConstant("GrandOutput", F);    // Write the big final output or not?
 	} else {
-		if (!exists("in_file")) defineConstant("in_file", "~/Desktop/tmp/D_rerio_ch25_excl_N_1MB.split.10Kmer.fasta");	// input file name: ancestral seq from a fasta file
+		if (!exists("in_file")) defineConstant("in_file", "~/Desktop/Hap-SLiM_project/D_rerio_ch25_excl_N_1MB.split.10Kmer.fasta");	// input file name: ancestral seq from a fasta file
 		defineConstant("L", initializeAncestralNucleotides(in_file));  // genome length
-		if (!exists("out_file")) defineConstant("out_file", "~/Desktop/tmp/slimout");
+		if (!exists("out_file")) defineConstant("out_file", "~/Desktop/Hap-SLiM_project/slimout");
 		if (!exists("K")) defineConstant("K", 500);
 		if (!exists("mc")) defineConstant("mc", 250);
-		if (!exists("MU")) defineConstant("MU", 1e-7);
+		if (!exists("MU")) defineConstant("MU", 1e-4);
 		if (!exists("R")) defineConstant("R", 1e-8);
 		if (!exists("ST")) defineConstant("ST", "n");
 		if (!exists("SC")) defineConstant("SC", "n");
@@ -115,7 +116,8 @@ initialize()
 		if (!exists("NonCodingLen")) defineConstant("NonCodingLen", 5000);
 		if (!exists("IntronLen")) defineConstant("IntronLen", 500);
 		if (!exists("ExonLen")) defineConstant("ExonLen", 300);
-		if (!exists("SpermPopSeqFastaCount")) defineConstant("SpermPopSeqFastaCount", 1);
+		if (!exists("MaleSpermSampleCount")) defineConstant("MaleSpermSampleCount", 1);
+		if (!exists("PerMaleSpermSampleCount")) defineConstant("PerMaleSpermSampleCount", 100);
 		if (!exists("GrandOutput")) defineConstant("GrandOutput", F);
 	}
 	
@@ -203,22 +205,56 @@ initialize()
 	}
 	initializeRecombinationRate(R);	
 }
-// generations 1-19999 are burn-in phase1:19999 reproduction(p1){	// generate K offspring with randomly chosen parents	for (i in seqLen(K))	{		Father = subpop.sampleIndividuals(1, sex="M");		Mother = subpop.sampleIndividuals(1, sex="F");		child = subpop.addCrossed(Mother, Father);	}		// done generating all offsprings, don't call us again this generation	self.active = 0;}1 early(){	catn("*****Burn-in is starting*****\n");
+// generations 1-19999 are burn-in phase
+1:19999 reproduction(p1)
+{	
+	// generate K offspring with randomly chosen parents	
+	for (i in seqLen(K))	{		
+		Father = subpop.sampleIndividuals(1, sex="M");		
+		Mother = subpop.sampleIndividuals(1, sex="F");		
+		child = subpop.addCrossed(Mother, Father);	
+	}		
+		// done generating all offsprings, don't call us again this generation	
+		self.active = 0;
+}
+
+1 early()
+{	
+	catn("*****Burn-in is starting*****\n");
 	defineConstant("simID", getSeed());
-	sim.setValue("counter", 3);				// within-ejaculate sperms population counter	sim.addSubpop("p1", K);		// diploid population	sim.addSubpop("p2", 0);		// haploid population
-}1:19999 early(){	// non-overlapping generations	inds = p1.individuals;	adults = inds[inds.age > 0];	adults.fitnessScaling = 0.0;
+	sim.setValue("counter", 3);	// within-ejaculate sperms population counter	
+	sim.addSubpop("p1", K);			// diploid population	
+	sim.addSubpop("p2", 0);			// haploid population
+}
+
+1:19999 early()
+{	
+	// non-overlapping generations	
+	inds = p1.individuals;	
+	adults = inds[inds.age > 0];	
+	adults.fitnessScaling = 0.0;
 	
 	// report generation progress
-	if (sim.generation % 1000 == 0) catn("gen: " + sim.generation);}19999 late(){				// all males get a non-zero unique tag value
-	males = p1.subsetIndividuals(sex="M");	males.tag = 1:males.length();
-			catn("*****Burn-in is completed*****\n");
+	if (sim.generation % 1000 == 0) catn("gen: " + sim.generation);
+}
+
+19999 late()
+{				
+	// all males get a non-zero unique tag value
+	males = p1.subsetIndividuals(sex="M");	
+	males.tag = 1:males.length();
+	catn("*****Burn-in is completed*****\n");
 	
 	// check p1 mean fitness
 	catn("p1 mean fitness = " + mean(p1.cachedFitness(NULL)) + "\n");
 	
 	// create within-ejaculate sperms populations
-	for (n in 3:(males.length()+2)) { sim.addSubpop("p"+n, 0); }}20000:20049 reproduction(p1){	// The ind record line: Male or Sperm|Tag|Sim_gen|Male genone1 or genone2; Sperm 1-4|Breakpoints|(B)enficial
-	// mut/(D)eleterious mut positions|All mut positions
+	for (n in 3:(males.length()+2)) { sim.addSubpop("p"+n, 0); }
+}
+	
+20000:20061 reproduction(p1)
+{	
+	// The ind record line: Male or Sperm|Tag|Sim_gen|Male genone1 or genone2; Sperm 1-4|Breakpoints|(B)enficial mut/(D)eleterious mut positions|All mut positions
 	g_1 = genome1;
 	g_1_mut_value = paste(g_1.mutations.nucleotideValue);
 	g_1_mut_pos = paste(g_1.mutations.position);
@@ -226,7 +262,7 @@ initialize()
 	if (ST == "b") { g_1_nonNeu_mut_pos = paste(c("B", g_1.positionsOfMutationsOfType(m2))); }
 	else if (ST == "d") { g_1_nonNeu_mut_pos = paste(c("D", g_1.positionsOfMutationsOfType(m2))); }
 	else { g_1_nonNeu_mut_pos = "Neu"; }
-		g_2 = genome2;
+	g_2 = genome2;
 	g_2_mut_value = paste(g_2.mutations.nucleotideValue);
 	g_2_mut_pos = paste(g_2.mutations.position);
 	
@@ -247,78 +283,111 @@ initialize()
 			writeFile(out_file+"_"+simID, male_g2_record, append = T);
 		}
 	}
-		for (meiosisCount in 1:mc)	{		if (individual.sex == "M")		{			if (BP == "s") { breaks = sim.chromosome.drawBreakpoints(individual); }
-			else if (BP == "n") { breaks = sim.chromosome.drawBreakpoints(individual, n = 0); }
-			else { breaks = sim.chromosome.drawBreakpoints(individual, n = BP); }
-			
-			s_1 = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
-			pn.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
-			s_2 = p2.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
-			pn.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
-			
-			if (GrandOutput)
+	
+	// for tagging male later
+	male_temp_tag = 1;
+		
+	for (meiosisCount in 1:mc)	
+		{
+			if (individual.sex == "M")	
 			{
-				s_1_mut_value = paste(s_1.genome1.mutations.nucleotideValue);
-				s_1_mut_pos = paste(s_1.genome1.mutations.position);
-				if (ST == "b") { s_1_nonNeu_mut_pos = paste(c("B", s_1.genome1.positionsOfMutationsOfType(m2))); }
-				else if (ST == "d") { s_1_nonNeu_mut_pos = paste(c("D", s_1.genome1.positionsOfMutationsOfType(m2))); }
-				else { s_1_nonNeu_mut_pos = "Neu"; }
-
-				s_2_mut_value = paste(s_2.genome1.mutations.nucleotideValue);
-				s_2_mut_pos = paste(s_2.genome1.mutations.position);
-				if (ST == "b") { s_2_nonNeu_mut_pos = paste(c("B", s_2.genome1.positionsOfMutationsOfType(m2))); }
-				else if (ST == "d") { s_2_nonNeu_mut_pos = paste(c("D", s_2.genome1.positionsOfMutationsOfType(m2))); }
-				else { s_2_nonNeu_mut_pos = "Neu"; }
-
-				break_num = size(breaks);
-				if (break_num==0) { breaks = 0; }
-				else if (break_num>1) { breaks = paste(breaks, sep = "_"); }
-				s1_record = paste(c("S", individual.tag, sim.generation, "1", breaks, break_num, s_1_nonNeu_mut_pos, s_1_mut_pos, s_1_mut_value), sep = "|");
-				writeFile(out_file+"_"+simID, s1_record, append = T);
-				s2_record = paste(c("S", individual.tag, sim.generation, "2", breaks, break_num, s_2_nonNeu_mut_pos, s_2_mut_pos, s_2_mut_value), sep = "|");
-				writeFile(out_file+"_"+simID, s2_record, append = T);
-			}
-						if (BP == "s") { breaks = sim.chromosome.drawBreakpoints(individual); }
-			else if (BP == "n") { breaks = sim.chromosome.drawBreakpoints(individual, n = 0); }
-			else { breaks = sim.chromosome.drawBreakpoints(individual, n = BP); }
-
-			s_3 = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
-			pn.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");			s_4 = p2.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
-			pn.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
+				// tagging male for the present generation
+				individual.tagF = male_temp_tag;
+				
+				if (BP == "s") { breaks = sim.chromosome.drawBreakpoints(individual); }
+				else if (BP == "n") { breaks = sim.chromosome.drawBreakpoints(individual, n = 0); }
+				else { breaks = sim.chromosome.drawBreakpoints(individual, n = BP); }
 			
-			if (GrandOutput)
-			{
-				s_3_mut_value = paste(s_3.genome1.mutations.nucleotideValue);
-				s_3_mut_pos = paste(s_3.genome1.mutations.position);
-				if (ST == "b") { s_3_nonNeu_mut_pos = paste(c("B", s_3.genome1.positionsOfMutationsOfType(m2))); }
-				else if (ST == "d") { s_3_nonNeu_mut_pos = paste(c("D", s_3.genome1.positionsOfMutationsOfType(m2))); }
-				else { s_3_nonNeu_mut_pos = "Neu"; }
+				s_1 = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
+				pn.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
+				s_2 = p2.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
+				pn.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
+			
+				if (GrandOutput)
+				{
+					s_1_mut_value = paste(s_1.genome1.mutations.nucleotideValue);
+					s_1_mut_pos = paste(s_1.genome1.mutations.position);
+					if (ST == "b") { s_1_nonNeu_mut_pos = paste(c("B", s_1.genome1.positionsOfMutationsOfType(m2))); }
+					else if (ST == "d") { s_1_nonNeu_mut_pos = paste(c("D", s_1.genome1.positionsOfMutationsOfType(m2))); }
+					else { s_1_nonNeu_mut_pos = "Neu"; }
 
-				s_4_mut_value = paste(s_4.genome1.mutations.nucleotideValue);
-				s_4_mut_pos = paste(s_4.genome1.mutations.position);
-				if (ST == "b") { s_4_nonNeu_mut_pos = paste(c("B", s_4.genome1.positionsOfMutationsOfType(m2))); }
-				else if (ST == "d") { s_4_nonNeu_mut_pos = paste(c("D", s_4.genome1.positionsOfMutationsOfType(m2))); }
-				else { s_4_nonNeu_mut_pos = "Neu"; }
+					s_2_mut_value = paste(s_2.genome1.mutations.nucleotideValue);
+					s_2_mut_pos = paste(s_2.genome1.mutations.position);
+					if (ST == "b") { s_2_nonNeu_mut_pos = paste(c("B", s_2.genome1.positionsOfMutationsOfType(m2))); }
+					else if (ST == "d") { s_2_nonNeu_mut_pos = paste(c("D", s_2.genome1.positionsOfMutationsOfType(m2))); }
+					else { s_2_nonNeu_mut_pos = "Neu"; }
 
-				break_num = size(breaks);
-				if (break_num==0) { breaks = 0; }
-				else if (break_num>1) { breaks = paste(breaks, sep = "_"); }
-				s3_record = paste(c("S", individual.tag, sim.generation, "3", breaks, break_num, s_3_nonNeu_mut_pos, s_3_mut_pos, s_3_mut_value), sep = "|");
-				writeFile(out_file+"_"+simID, s3_record, append = T);
-				s4_record = paste(c("S", individual.tag, sim.generation, "4", breaks, break_num, s_4_nonNeu_mut_pos, s_4_mut_pos, s_4_mut_value), sep = "|");
-				writeFile(out_file+"_"+simID, s4_record, append = T);
+					break_num = size(breaks);
+					if (break_num==0) { breaks = 0; }
+					else if (break_num>1) { breaks = paste(breaks, sep = "_"); }
+					s1_record = paste(c("S", individual.tag, sim.generation, "1", breaks, break_num, s_1_nonNeu_mut_pos, s_1_mut_pos, s_1_mut_value), sep = "|");
+					writeFile(out_file+"_"+simID, s1_record, append = T);
+					s2_record = paste(c("S", individual.tag, sim.generation, "2", breaks, break_num, s_2_nonNeu_mut_pos, s_2_mut_pos, s_2_mut_value), sep = "|");
+					writeFile(out_file+"_"+simID, s2_record, append = T);
+				}
+				
+				if (BP == "s") { breaks = sim.chromosome.drawBreakpoints(individual); }
+				else if (BP == "n") { breaks = sim.chromosome.drawBreakpoints(individual, n = 0); }
+				else { breaks = sim.chromosome.drawBreakpoints(individual, n = BP); }
+
+				s_3 = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");
+				pn.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "M");			
+				s_4 = p2.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
+				pn.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "M");
+			
+				if (GrandOutput)
+				{
+					s_3_mut_value = paste(s_3.genome1.mutations.nucleotideValue);
+					s_3_mut_pos = paste(s_3.genome1.mutations.position);
+					if (ST == "b") { s_3_nonNeu_mut_pos = paste(c("B", s_3.genome1.positionsOfMutationsOfType(m2))); }
+					else if (ST == "d") { s_3_nonNeu_mut_pos = paste(c("D", s_3.genome1.positionsOfMutationsOfType(m2))); }
+					else { s_3_nonNeu_mut_pos = "Neu"; }
+
+					s_4_mut_value = paste(s_4.genome1.mutations.nucleotideValue);
+					s_4_mut_pos = paste(s_4.genome1.mutations.position);
+					if (ST == "b") { s_4_nonNeu_mut_pos = paste(c("B", s_4.genome1.positionsOfMutationsOfType(m2))); }
+					else if (ST == "d") { s_4_nonNeu_mut_pos = paste(c("D", s_4.genome1.positionsOfMutationsOfType(m2))); }
+					else { s_4_nonNeu_mut_pos = "Neu"; }
+
+					break_num = size(breaks);
+					if (break_num==0) { breaks = 0; }
+					else if (break_num>1) { breaks = paste(breaks, sep = "_"); }
+					s3_record = paste(c("S", individual.tag, sim.generation, "3", breaks, break_num, s_3_nonNeu_mut_pos, s_3_mut_pos, s_3_mut_value), sep = "|");
+					writeFile(out_file+"_"+simID, s3_record, append = T);
+					s4_record = paste(c("S", individual.tag, sim.generation, "4", breaks, break_num, s_4_nonNeu_mut_pos, s_4_mut_pos, s_4_mut_value), sep = "|");
+					writeFile(out_file+"_"+simID, s4_record, append = T);
+				}
+				// within-ejaculate sperms inherit the tag from their father all the way from the founding father/mother			
+				c(s_1, s_2, s_3, s_4).tag = individual.tag;
+				// within-ejaculate sperms inherit the tag from their father at the present generation							
+				c(s_1, s_2, s_3, s_4).tagF = individual.tagF;
+				// incrementing male tagF at the present generation
+				male_temp_tag = male_temp_tag + 1;
+			} else if (individual.sex == "F")
+			{			
+				breaks = sim.chromosome.drawBreakpoints(individual);
+				if (runif(1) <= 0.5) 
+				{
+					e = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "F");
+				} else
+				{
+					e = p2.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "F");
+				}
 			}
-			// within-ejaculate sperms inherit the tag from their father			c(s_1, s_2, s_3, s_4).tag = individual.tag;
-		}		else if (individual.sex == "F")		{			breaks = sim.chromosome.drawBreakpoints(individual);			if (runif(1) <= 0.5)
-			{				e = p2.addRecombinant(g_1, g_2, breaks, NULL, NULL, NULL, "F");
-			}			else
-			{				e = p2.addRecombinant(g_2, g_1, breaks, NULL, NULL, NULL, "F");
-			}		}	}
+		}
 	if (individual.sex == "M") 
 	{
 		sim.setValue("counter", n + 1);
-		pn.tag = individual.tag;
-	}}20000:20049 reproduction(p2){	// initially, all sperms will have inherited tags of 1:pop_size; we will switch them to 0	// when they get used to fertilize an egg, so that they are only used once
+		// now we are using tagF for the present generation to tag within-ejaculate sperm subpop
+		// need to switch to tag if for tracking family history from the founding population 
+		pn.tag = asInteger(individual.tagF);
+	}
+}
+
+20000:20061 reproduction(p2)
+{	
+	// initially, all sperms will have inherited tags of 1:pop_size; we will switch them to 0	
+	// when they get used to fertilize an egg, so that they are only used once
 	// We also need to increase mating success for the fitter sperms
 	// for now, limit K eggs to be fertilized to maintain population size K
 	sperms = subpop.subsetIndividuals(sex="M");
@@ -334,41 +403,61 @@ initialize()
 		s.tag = 0;
 	}
 	self.active = 0;
-}// Note that the addition of non-neutral mutations in nonWF model does not affect the mating success and fecundity
-// and it actually will not have any desired effect in the current model because all individuals will be erased 
-// regardless fitness for strict non-overlapping generations. In this sense, are non-neutral mutations still desired?  20000:20049 early(){	if (sim.generation % 2 == 0)	{		catn("*****This is the haploid phase*****");
+}
+
+// Note that the addition of non-neutral mutations in nonWF model does not affect the mating success and fecundity and it actually will not have any desired effect in the current model because all individuals will be erased regardless fitness for strict non-overlapping generations. In this sense, are non-neutral mutations still desired?  
+
+20000:20061 early()
+{	
+	if (sim.generation % 2 == 0)
+	{		
+		catn("*****This is the haploid phase*****");
 
 		// checking certain tagged sperms and their genetic polymorphism
 		//select = p2.subsetIndividuals(sex="M", tag=1);
 		//catn(c("Tag 1 size:", size(select)));
 		//catn(c("Tag 1 polymorphism:", ifelse(size(select) == 20, sum(c(select.genomes.countOfMutationsOfType(m1), select.genomes.countOfMutationsOfType(m2)))/size(select), 0.0)));
-
-		// output the selected sperm pop to a genome fasta file
-		count = SpermPopSeqFastaCount;
-		while (count > 0)
-		{
-			do { select_p = sample(sim.subpopulations, 1); }
-			while (select_p.id == 1 | select_p.id == 2);
 		
-			for (ind in select_p.individuals)
+		// output the selected sperm pop to genome fasta files every 10 generations
+		if (sim.generation % 10 == 0 & sim.generation > 20000)
+		{
+			count = MaleSpermSampleCount;
+			// pick 50 sperm subpops excluding p1 & p2 (two extra samples are in case of p1/p2 were selected)
+			select_p = sample(sim.subpopulations, 52);
+			for (subpop in select_p)
 			{
-				writeFile("~/Desktop/tmp/"+simID+".gen"+sim.generation+".p"+select_p.id+".fa", c(">"+ind.index+".g1", ind.genome1.nucleotides()), append = T);
+				if (subpop.id != 1 & subpop.id != 2 & count > 0)
+				{ 
+					for (ind in subpop.sampleIndividuals(100))
+						{
+							writeFile("~/Desktop/Hap-SLiM_project/"+simID+".gen"+sim.generation+".fa", c(">"+ind.index+"_male_"+asString(subpop.id), ind.genome1.nucleotides()), append = T);
+						}
+					count = count - 1;
+				}
 			}
-			count = count - 1;
+		}
+		
+		// remove all sperm subpops
+		for (pop in sim.subpopulations)
+		{
+			if (pop.id != 1 & pop.id != 2) { pop.removeSubpopulation(); }		
 		}
 		
 		// here we can do some quick analyses of each within-ejaculate sperm subpopulation, then remove it
-		for (pop in sim.subpopulations)
-		{
-			if (pop.id != 1 & pop.id != 2)
-			{
-				catn("p"+pop.id + "tag"+pop.tag + "sperms heterozygosity:" + subpopHeterozygosity(pop, mc*4) + ifelse(sum(pop.genomes.countOfMutationsOfType(m6))==0, "m1", "m6-"+sum(pop.genomes.countOfMutationsOfType(m6))));
-				pop.removeSubpopulation();
-			}
-		}
+		//for (pop in sim.subpopulations)
+		//{
+		//	if (pop.id != 1 & pop.id != 2)
+		//	{
+		//		catn("p"+pop.id + "tag"+pop.tag + "sperms heterozygosity:" + subpopHeterozygosity(pop, mc*4) + ifelse(sum(pop.genomes.countOfMutationsOfType(m6))==0, "m1", "m6-"+sum(pop.genomes.countOfMutationsOfType(m6))));
+		//		pop.removeSubpopulation();
+		//	}
+		//}
 		
-		sperms = p2.subsetIndividuals(sex="M");		// purge p1 (diploid individuals) for strict non-overlaping generations		p1.fitnessScaling = 0.0;
-		// no mutation is allowed during fertilization		//sim.chromosome.setHotspotMap(0.0);
+		sperms = p2.subsetIndividuals(sex="M");		
+		// purge p1 (diploid individuals) for strict non-overlaping generations		
+		p1.fitnessScaling = 0.0;
+		// no mutation is allowed during fertilization		
+		//sim.chromosome.setHotspotMap(0.0);
 		// introduce non-neutral mutations at haploid level
 		if (SC == "h" | SC == "b")
 		{
@@ -396,16 +485,20 @@ initialize()
 			catn("Sperm: position(s) -" + paste(unique(sperm_nonNeu_mut.position, preserveOrder=F)) + ", count -" + size(sperm_nonNeu_mut) + ", prevalence -" + (size(sperm_nonNeu_mut) / size(sperms)));
 			catn("Egg: position(s) -" + paste(unique(egg_nonNeu_mut.position, preserveOrder=F)) + ", count -", size(egg_nonNeu_mut) + ", prevalence -" + (size(egg_nonNeu_mut) / size(eggs)));
 		}
-	}	else	{		catn("*****This is the diploid phase*****");
+	}	else	{		
+		catn("*****This is the diploid phase*****");
 		// adjust mutation type proportion of genomicElementType g1 back to the initial setting (m1:m6 1:0)
 		g1.setMutationFractions(c(m1,m6),c(1,0));
 		
-		males = p1.subsetIndividuals(sex="M");		p2.fitnessScaling = 0.0;	// purge p2 (haploid individuals)
-		//p1.fitnessScaling = K / p1.individualCount; // we limit number of sperms to fertilize eggs in the reproduction() callback to control population size
-		//catn(c("total p1: ", p1.individualCount, "fitnessScaling: ", p1.fitnessScaling));		//sim.chromosome.setHotspotMap(MU);	// don't need this if wasn't disabled in the haploid phase
+		males = p1.subsetIndividuals(sex="M");		
+		p2.fitnessScaling = 0.0;	// purge p2 (haploid individuals)
 		
-		// introduce non-neutral mutations at diploid level (need to check: now assume this happen after the
-		// p1.fitnessScaling)
+		//p1.fitnessScaling = K / p1.individualCount; 
+		// we limit number of sperms to fertilize eggs in the reproduction() callback to control population size
+		//catn(c("total p1: ", p1.individualCount, "fitnessScaling: ", p1.fitnessScaling));		
+		//sim.chromosome.setHotspotMap(MU);	 // don't need this if wasn't disabled in the haploid phase
+		
+		// introduce non-neutral mutations at diploid level (need to check: now assume this happen after the p1.fitnessScaling)
 		if (SC == "d" | SC == "b")
 		{
 			if (sim.generation == 20001)
@@ -417,7 +510,7 @@ initialize()
 					catn(c(sim.generation, "early(): introducing non neutral mutations"));
 				}
 			}
-		}		// check the existence of non neutral mutations
+		}		// check the existence of non neutral mutations
 		male_nonNeu_mut = males.genomes.mutationsOfType(m6);
 		females = p1.subsetIndividuals(sex="F");
 		female_nonNeu_mut = females.genomes.mutationsOfType(m6);
@@ -426,30 +519,46 @@ initialize()
 			catn(c("# Non-neutral mutations profile:"));
 			catn("Male: position(s) -" + paste(unique(male_nonNeu_mut.position, preserveOrder=F)) + ", count -" + size(male_nonNeu_mut) + ", prevalence -" + (size(male_nonNeu_mut) / size(males.genomes)));
 			catn("Female: position(s) -" + paste(unique(female_nonNeu_mut.position, preserveOrder=F)) + ", count -" + size(female_nonNeu_mut) + ", prevalence -" + (size(female_nonNeu_mut) / size(females.genomes)));
-		}	}}// convert all m6 mutations to neutral for diploid population p120000:20049 fitness(m6, p1) { return 1.0; }
-20000:20049 late(){	if (sim.generation % 2 == 0)	{		sperms = p2.subsetIndividuals(sex="M");
-		eggs = p2.subsetIndividuals(sex="F");		catn(c(sim.generation, "late(): total", size(sperms), "sperms"));
+		}
+	}
+}
+		
+		// convert all m6 mutations to neutral for diploid population p120000:20049 fitness(m6, p1) { return 1.0; }
+
+20000:20061 late()
+{	
+	if (sim.generation % 2 == 0)	
+	{		
+		sperms = p2.subsetIndividuals(sex="M");
+		eggs = p2.subsetIndividuals(sex="F");		
+		catn(c(sim.generation, "late(): total", size(sperms), "sperms"));
 		catn(c(sim.generation, "late(): total", size(eggs), "eggs"));
 		// check haploid mean fitness
 		catn("haploid mean fitness = " + mean(p2.cachedFitness(NULL)) + "\n");
-		sperms.color = ifelse(sperms.tag == 1, "red", "blue");
+		sperms.color = ifelse(sperms.tag == 1, "red", "blue");
 		
-		writeFile("~/Desktop/tmp/"+simID+"_popsize_file", paste(sim.generation + " haploid mean fitness = " + mean(p2.cachedFitness(NULL))), append = T);
-		writeFile("~/Desktop/tmp/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(sperms) + " sperms"), append = T);
-		writeFile("~/Desktop/tmp/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(eggs) + " eggs"), append = T);
+		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " haploid mean fitness = " + mean(p2.cachedFitness(NULL))), append = T);
+		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(sperms) + " sperms"), append = T);
+		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(eggs) + " eggs"), append = T);
 
-	}	else	{		males = p1.subsetIndividuals(sex="M");
-		females = p1.subsetIndividuals(sex="F");		catn(c(sim.generation, "late(): total", size(males), "males"));
-		catn(c(sim.generation, "late(): total", size(females), "females"));		catn(c(sim.generation, "late(): total", p1.individualCount, "individuals"));
+	}	else	{		
+		males = p1.subsetIndividuals(sex="M");
+		females = p1.subsetIndividuals(sex="F");		
+		catn(c(sim.generation, "late(): total", size(males), "males"));
+		catn(c(sim.generation, "late(): total", size(females), "females"));		
+		catn(c(sim.generation, "late(): total", p1.individualCount, "individuals"));
 		// check diploid mean fitness
 		catn("diploid mean fitness = " + mean(p1.cachedFitness(NULL)) + "\n");
 
 		males.color = ifelse(males.tag != 0, "red", "blue");
-		writeFile("~/Desktop/tmp/"+simID+"_popsize_file", paste(sim.generation + " diploid mean fitness = " + mean(p1.cachedFitness(NULL))), append = T);
-		writeFile("~/Desktop/tmp/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + p1.individualCount + " individuals"), append = T);
-		writeFile("~/Desktop/tmp/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(females) + " females"), append = T);
-		writeFile("~/Desktop/tmp/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(males) + " males"), append = T);
+		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " diploid mean fitness = " + mean(p1.cachedFitness(NULL))), append = T);
+		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + p1.individualCount + " individuals"), append = T);
+		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(females) + " females"), append = T);
+		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(males) + " males"), append = T);
 		
 		for (n in 3:(males.length()+2)) { sim.addSubpop("p"+n, 0); }	// recreate within-ejaculate sperms populations
 		sim.setValue("counter", 3);												// reset the counter
-	}}20049 late(){	sim.simulationFinished();}
+	}
+}
+	
+20061 late(){	sim.simulationFinished(); }
