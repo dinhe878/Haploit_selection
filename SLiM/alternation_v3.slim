@@ -430,7 +430,7 @@ initialize()
 				{
 					for (ind in subpop.sampleIndividuals(100))
 						{
-							writeFile("~/Desktop/Hap-SLiM_project/"+simID+".gen"+sim.generation+".fa", c(">"+ind.index+"_male_"+asString(subpop.id), ind.genome1.nucleotides()), append = T);
+							writeFile(simID+".gen"+sim.generation+".fa", c(">"+ind.index+"_male_"+asString(subpop.id), ind.genome1.nucleotides()), append = T);
 						}
 					count = count - 1;
 				}
@@ -537,9 +537,9 @@ initialize()
 		catn("haploid mean fitness = " + mean(p2.cachedFitness(NULL)) + "\n");
 		sperms.color = ifelse(sperms.tag == 1, "red", "blue");
 
-		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " haploid mean fitness = " + mean(p2.cachedFitness(NULL))), append = T);
-		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(sperms) + " sperms"), append = T);
-		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(eggs) + " eggs"), append = T);
+		writeFile(simID+"_popsize_file", paste(sim.generation + " haploid mean fitness = " + mean(p2.cachedFitness(NULL))), append = T);
+		writeFile(simID+"_popsize_file", paste(sim.generation + " late(): total " + size(sperms) + " sperms"), append = T);
+		writeFile(simID+"_popsize_file", paste(sim.generation + " late(): total " + size(eggs) + " eggs"), append = T);
 
 	}	else	{
 		males = p1.subsetIndividuals(sex="M");
@@ -551,10 +551,10 @@ initialize()
 		catn("diploid mean fitness = " + mean(p1.cachedFitness(NULL)) + "\n");
 
 		males.color = ifelse(males.tag != 0, "red", "blue");
-		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " diploid mean fitness = " + mean(p1.cachedFitness(NULL))), append = T);
-		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + p1.individualCount + " individuals"), append = T);
-		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(females) + " females"), append = T);
-		writeFile("~/Desktop/Hap-SLiM_project/"+simID+"_popsize_file", paste(sim.generation + " late(): total " + size(males) + " males"), append = T);
+		writeFile(simID+"_popsize_file", paste(sim.generation + " diploid mean fitness = " + mean(p1.cachedFitness(NULL))), append = T);
+		writeFile(simID+"_popsize_file", paste(sim.generation + " late(): total " + p1.individualCount + " individuals"), append = T);
+		writeFile(simID+"_popsize_file", paste(sim.generation + " late(): total " + size(females) + " females"), append = T);
+		writeFile(simID+"_popsize_file", paste(sim.generation + " late(): total " + size(males) + " males"), append = T);
 
 		for (n in 3:(males.length()+2)) { sim.addSubpop("p"+n, 0); }	// recreate within-ejaculate sperms populations
 		sim.setValue("counter", 3);												// reset the counter
