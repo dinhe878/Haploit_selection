@@ -418,8 +418,8 @@ initialize()
 		//catn(c("Tag 1 size:", size(select)));
 		//catn(c("Tag 1 polymorphism:", ifelse(size(select) == 20, sum(c(select.genomes.countOfMutationsOfType(m1), select.genomes.countOfMutationsOfType(m2)))/size(select), 0.0)));
 
-		// output the selected sperm pop to genome fasta files every 10 generations
-		if ((sim.generation % 10 == 0 & sim.generation > 20000)|(sim.generation % 50 == 0 & sim.generation > 20050))
+		// output the selected sperm pop to genome fasta files every 10/50 generations
+		if ((sim.generation % 10 == 0 & sim.generation > 20000 & sim.generation <= 20050)|(sim.generation % 50 == 0 & sim.generation > 20050))
 		{
 			count = MaleSpermSampleCount;
 			// pick 50 sperm subpops excluding p1 & p2 (two extra samples are in case of p1/p2 were selected)
