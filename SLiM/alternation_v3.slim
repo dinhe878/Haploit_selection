@@ -47,33 +47,6 @@ SC, non-neutral selection scenario: (h)aploid-only, (d)iploid-only, (b)oth, (n)e
 
 */
 
-// Given two haploid genomes, the number of segregating sites between the two, divided by the length of the chromosome, is pi, the average nucleotide heterozygosity, which is the standard measure for the genetic diversity in a population.  The expected value of pi is 4*Ne*mu for a pure neutral model.
-function (f$)genomicHeterozygosity(o<Genome>$ genome1, o<Genome>$ genome2, i$ chrLen)
-{
-	muts1 = genome1.mutations;
-	muts2 = genome2.mutations;
-	unshared = setSymmetricDifference(muts1, muts2);
-	pi = size(unshared) / chrLen;
-	return pi;
-}
-
-// Estimate the average nucleotide heterozygosity in a subpopulation by sampling individuals at random and averaging the heterozygosity of all of the individuals sampled.  Note that this function normally uses a sample of individuals, of a size supplied in the optional parameter sampleSize; but if sampleSize is equal to the number of individuals in subpop, it will instead compute the heterozygosity exactly, as the mean of the heterozygosities of all individuals, rather than taking a sample.
-function (f$)subpopHeterozygosity(o<Subpopulation>$ subpop, i$ sampleSize)
-{
-	if (sampleSize == subpop.individualCount)
-		sampledIndividuals = subpop.individuals;
-	else
-		sampledIndividuals = sample(subpop.individuals, sampleSize, replace=T);
-
-	pi_total = 0;
-	for (individual in sampledIndividuals)
-	{
-		genomes = individual.genomes;
-		individual_pi = genomicHeterozygosity(genomes[0], genomes[1], L);
-		pi_total = pi_total + individual_pi;
-	}
-	return pi_total / sampleSize;
-}
 initialize()
 {
 	// turn on nonWF model
@@ -448,7 +421,7 @@ initialize()
 		//{
 		//	if (pop.id != 1 & pop.id != 2)
 		//	{
-		//		catn("p"+pop.id + "tag"+pop.tag + "sperms heterozygosity:" + subpopHeterozygosity(pop, mc*4) + ifelse(sum(pop.genomes.countOfMutationsOfType(m6))==0, "m1", "m6-"+sum(pop.genomes.countOfMutationsOfType(m6))));
+		//		catn("p"+pop.id + "tag"+pop.tag + "sperms heterozygosity:" + calcHeterozygosity(pop.genomes) + ifelse(sum(pop.genomes.countOfMutationsOfType(m6))==0, "m1", "m6-"+sum(pop.genomes.countOfMutationsOfType(m6))));
 		//		pop.removeSubpopulation();
 		//	}
 		//}
