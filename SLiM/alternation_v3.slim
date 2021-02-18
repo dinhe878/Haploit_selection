@@ -252,7 +252,7 @@ initialize()
 	for (n in 3:(males.length()+2)) { sim.addSubpop("p"+n, 0); }
 }
 
-20000:20501 reproduction(p1)
+20000:20101 reproduction(p1)
 {
 	// The ind record line: Male or Sperm|Tag|Sim_gen|Male genone1 or genone2; Sperm 1-4|Breakpoints|(B)enficial mut/(D)eleterious mut positions|All mut positions
 	g_1 = genome1;
@@ -384,7 +384,7 @@ initialize()
 	}
 }
 
-20000:20501 reproduction(p2)
+20000:20101 reproduction(p2)
 {
 	// initially, all sperms will have inherited tags of 1:pop_size; we will switch them to 0
 	// when they get used to fertilize an egg, so that they are only used once
@@ -407,7 +407,7 @@ initialize()
 
 // Note that the addition of non-neutral mutations in nonWF model does not affect the mating success and fecundity and it actually will not have any desired effect in the current model because all individuals will be erased regardless fitness for strict non-overlapping generations. In this sense, are non-neutral mutations still desired?
 
-20000:20501 early()
+20000:20101 early()
 {
 	if (sim.generation % 2 == 0)
 	{
@@ -525,7 +525,7 @@ initialize()
 
 		// convert all m6 mutations to neutral for diploid population p120000:20049 fitness(m6, p1) { return 1.0; }
 
-20000:20501 late()
+20000:20101 late()
 {
 	if (sim.generation % 2 == 0)
 	{
@@ -561,4 +561,4 @@ initialize()
 	}
 }
 
-20501 late(){	sim.simulationFinished(); }
+20101 late(){	sim.simulationFinished(); }
