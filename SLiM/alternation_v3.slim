@@ -85,20 +85,20 @@ initialize()
 
 	if (exists("slimgui"))
 	{
-		defineConstant("K", 100);     // carrying capacity (diploid)
+		defineConstant("K", 500);     // carrying capacity (diploid)
 		defineConstant("MU", 1e-4);   // mutation rate
 		defineConstant("R", 1e-8);    // recombination rate
 		defineConstant("L", initializeAncestralNucleotides("D_rerio_ch25_excl_N_1MB.split.10Kmer.fasta"));  // ancestral seq from a fasta file
 		defineConstant("out_file", "slimout");	// output file name
-		defineConstant("mc", 10);		// meiosis count per diploid individual
-		defineConstant("ST", "b");	// selection type: (b)enefiical, (d)eleterious, (n)eutral
+		defineConstant("mc", 250);		// meiosis count per diploid individual
+		defineConstant("ST", "n");	// selection type: (b)enefiical, (d)eleterious, (n)eutral
 		defineConstant("SC", "h");	// non-neutral selection scenario: (h)aploid-only, (d)iploid-only, (b)oth, (n)eutral
 		defineConstant("BP", "s");	// "n": no crossing-over; (Integer>0) user-defined numbers of crossing-over; "s": numbers of crossing-over based on recombination rate
 		defineConstant("GS", F);    // does the chromosome have genomic structures? True/False
 		defineConstant("NonCodingLen", 5000);    // Noncoding region length
 		defineConstant("IntronLen", 500);    // Intron region length
 		defineConstant("ExonLen", 300);    // Exon region length
-		defineConstant("MaleSpermSampleCount", 1);    // Number of males' within-ejaculate sperm pop will be sampled and output as  fasta format
+		defineConstant("MaleSpermSampleCount", 50);    // Number of males' within-ejaculate sperm pop will be sampled and output as  fasta format
 		defineConstant("PerMaleSpermSampleCount", 100);    // Number of sperms per maleswill be sampled and output as  fasta format
 		defineConstant("GrandOutput", F);    // Write the big final output or not?
 	} else {
@@ -252,7 +252,7 @@ initialize()
 	for (n in 3:(males.length()+2)) { sim.addSubpop("p"+n, 0); }
 }
 
-20000:20101 reproduction(p1)
+20000:20501 reproduction(p1)
 {
 	// The ind record line: Male or Sperm|Tag|Sim_gen|Male genone1 or genone2; Sperm 1-4|Breakpoints|(B)enficial mut/(D)eleterious mut positions|All mut positions
 	g_1 = genome1;
@@ -384,7 +384,7 @@ initialize()
 	}
 }
 
-20000:20101 reproduction(p2)
+20000:20501 reproduction(p2)
 {
 	// initially, all sperms will have inherited tags of 1:pop_size; we will switch them to 0
 	// when they get used to fertilize an egg, so that they are only used once
@@ -407,7 +407,7 @@ initialize()
 
 // Note that the addition of non-neutral mutations in nonWF model does not affect the mating success and fecundity and it actually will not have any desired effect in the current model because all individuals will be erased regardless fitness for strict non-overlapping generations. In this sense, are non-neutral mutations still desired?
 
-20000:20101 early()
+20000:20501 early()
 {
 	if (sim.generation % 2 == 0)
 	{
@@ -525,7 +525,7 @@ initialize()
 
 		// convert all m6 mutations to neutral for diploid population p120000:20049 fitness(m6, p1) { return 1.0; }
 
-20000:20101 late()
+20000:20501 late()
 {
 	if (sim.generation % 2 == 0)
 	{
@@ -561,4 +561,4 @@ initialize()
 	}
 }
 
-20101 late(){	sim.simulationFinished(); }
+20501 late(){	sim.simulationFinished(); }
